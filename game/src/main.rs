@@ -3,6 +3,8 @@ use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
 };
+mod camera;
+use camera::*;
 
 const TIME_STEP: f32 = 1.0 / 60.0;
 
@@ -18,13 +20,14 @@ enum Collider {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // cameras
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    // commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn_bundle(new_camera_2d()); 
 
     commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load("crab.png"),
+        texture: asset_server.load("turtle_idle_01.png"),
         transform: Transform {
-            translation: Vec3::new(0.0, -215.0, 0.0),
+            translation: Vec3::new(0.0, -100.0, 0.0),
             // scale: Vec3::new(30.0, 30.0, 0.0),
             ..Default::default()
         },
@@ -35,6 +38,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     })
     .insert(Player { speed: 500.0 })
+    .with_children(|parent| {
+        parent.spawn_bundle(new_camera_2d());
+    })    
     .insert(Collider::Player);
 }
 
@@ -47,10 +53,14 @@ impl Plugin for HelloPlugin {
     }
 }
 
+// fn player_movement_system(
+//     keyboard_input: Res<Input<KeyCode>>,
+//     mut query: Query<(&Player, &mut Transform)>,
+//     mut camera: Query<&mut Transform, With<Camera>>
+// ) {
 fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Transform)>,
-    mut camera: Query<&mut Transform, With<Camera>>
+    mut query: Query<(&Player, &mut Transform)>
 ) {
     let (paddle, mut transform) = query.single_mut();
     
@@ -83,8 +93,8 @@ fn player_movement_system(
     translation.x = translation.x.min(380.0).max(-380.0);
     // move the player in y also because Marisa said so
     translation.y += direction_y * paddle.speed * TIME_STEP;
-    let cam_trans = &mut camera;
-    cam_trans.y = cam_dir_y;
+    // let cam_trans = &mut camera;
+    // cam_trans.y = cam_dir_y;
 }
 
 
