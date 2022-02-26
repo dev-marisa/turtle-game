@@ -5,3 +5,10 @@ edition = "2021"
 authors = ["Maria 'hanadrizz", "Marisa", "WinterP"]
 
 [dependencies]
+bevy = "0.6.1"
+
+[workspace]
+resolver = "2"
+
+[toolchain]
+channel = "nightly"
