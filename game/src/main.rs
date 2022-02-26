@@ -5,8 +5,15 @@ use bevy::{
 };
 mod camera;
 use camera::*;
+use rand::Rng;
 
 const TIME_STEP: f32 = 1.0 / 60.0;
+
+#[derive(Component)]
+struct Particle;
+
+#[derive(Component)]
+struct Barrier;
 
 #[derive(Component)]
 struct Player {
@@ -16,6 +23,59 @@ struct Player {
 #[derive(Component)]
 enum Collider {
     Player,
+}
+
+fn spawn_sand_particles(mut commands: Commands) {
+    let mut rng = rand::thread_rng();
+    
+    // right barier
+    commands.spawn_bundle(SpriteBundle {
+        transform: Transform {
+            translation: Vec3::new(570.0, 0.0, 0.0),
+            scale: Vec3::new(400.0, 10000.0, 0.0),
+            ..Default::default()
+        },
+        sprite: Sprite {
+            color: Color::rgb(0.66, 0.59, 0.4),
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .insert(Barrier {});
+
+    // left barier
+    commands.spawn_bundle(SpriteBundle {
+        transform: Transform {
+            translation: Vec3::new(-570.0, 0.0, 0.0),
+            scale: Vec3::new(400.0, 10000.0, 0.0),
+            ..Default::default()
+        },
+        sprite: Sprite {
+            color: Color::rgb(0.66, 0.59, 0.4),
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .insert(Barrier {});
+
+    // spawn some random particles
+    for i in 0..1000 {
+        let mut rand_x = rng.gen_range(-1000..1000);
+        let mut rand_y = rng.gen_range(-1000..5000);
+        commands.spawn_bundle(SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(rand_x as f32, rand_y as f32, 0.0),
+                scale: Vec3::new(3.0, 3.0, 0.0),
+                ..Default::default()
+            },
+            sprite: Sprite {
+                color: Color::rgb(0.2, 0.3, 0.2),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .insert(Particle {});
+    }
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -49,6 +109,7 @@ pub struct HelloPlugin;
 impl Plugin for HelloPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_startup_system(spawn_sand_particles)    
             .add_startup_system(setup);
     }
 }
@@ -90,7 +151,7 @@ fn player_movement_system(
     // move the paddle horizontally
     translation.x += direction_x * paddle.speed * TIME_STEP;
     // bound the paddle within the walls
-    translation.x = translation.x.min(380.0).max(-380.0);
+    translation.x = translation.x.min(360.0).max(-360.0);
     // move the player in y also because Marisa said so
     translation.y += direction_y * paddle.speed * TIME_STEP;
     // let cam_trans = &mut camera;
