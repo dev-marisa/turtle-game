@@ -3,6 +3,8 @@ use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
 };
+mod camera;
+use camera::*;
 
 const TIME_STEP: f32 = 1.0 / 60.0;
 
@@ -18,13 +20,14 @@ enum Collider {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // cameras
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
-    commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    // commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn_bundle(new_camera_2d()); 
 
     commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load("crab.png"),
+        texture: asset_server.load("turtle_idle_01.png"),
         transform: Transform {
-            translation: Vec3::new(0.0, -215.0, 0.0),
+            translation: Vec3::new(0.0, -100.0, 0.0),
             // scale: Vec3::new(30.0, 30.0, 0.0),
             ..Default::default()
         },
@@ -35,6 +38,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     })
     .insert(Player { speed: 500.0 })
+    .with_children(|parent| {
+        parent.spawn_bundle(new_camera_2d());
+    })    
     .insert(Collider::Player);
 }
 
@@ -47,14 +53,20 @@ impl Plugin for HelloPlugin {
     }
 }
 
+// fn player_movement_system(
+//     keyboard_input: Res<Input<KeyCode>>,
+//     mut query: Query<(&Player, &mut Transform)>,
+//     mut camera: Query<&mut Transform, With<Camera>>
+// ) {
 fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Transform)>,
+    mut query: Query<(&Player, &mut Transform)>
 ) {
     let (paddle, mut transform) = query.single_mut();
     
     let mut direction_x = 0.0;
     let mut direction_y = 0.0;
+    let mut cam_dir_y = 0.0;
 
     if keyboard_input.pressed(KeyCode::Left) {
         direction_x -= 1.0;
@@ -66,10 +78,12 @@ fn player_movement_system(
 
     if keyboard_input.pressed(KeyCode::Up) {
         direction_y += 1.0;
+        cam_dir_y += 1.0;
     }
 
     if keyboard_input.pressed(KeyCode::Down) {
         direction_y -= 1.0;
+        cam_dir_y -= 1.0;
     }
 
     let translation = &mut transform.translation;
@@ -79,17 +93,36 @@ fn player_movement_system(
     translation.x = translation.x.min(380.0).max(-380.0);
     // move the player in y also because Marisa said so
     translation.y += direction_y * paddle.speed * TIME_STEP;
+    // let cam_trans = &mut camera;
+    // cam_trans.y = cam_dir_y;
 }
+
 
 
 fn main() {
     App::new()
+        .insert_resource(WindowDescriptor {
+            title: "crab gaem".to_string(),
+            width: 900.0,
+            height: 600.0,
+            vsync: true,
+            resizable: false,
+            ..Default::default()
+        })
+        // Bevy, as bare bones it is, I've decided to just 
+        // add a color for now, we can probably get a more
+        // complicated texture, but just a color for now
+        // Bevy "rgb" actually goes from 0-1, so
+        // (255, 255, 255) is actually (1.0, 1.0, 1.0)
+        // I just used https://www.calculator.net/percent-calculator.html
+                                                  // nice
+        .insert_resource(ClearColor(Color::rgb(0.76, 0.69, 0.5)))
         .add_plugins(DefaultPlugins)
         .add_plugin(HelloPlugin)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
                 .with_system(player_movement_system)
-        )
+        )      
         .run();
 }
