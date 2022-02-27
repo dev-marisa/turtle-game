@@ -16,6 +16,9 @@ struct Particle;
 struct Barrier;
 
 #[derive(Component)]
+struct Obstacle;
+
+#[derive(Component)]
 struct Player {
     speed: f32,
 }
@@ -23,9 +26,10 @@ struct Player {
 #[derive(Component)]
 enum Collider {
     Player,
+    Obstacle
 }
 
-fn spawn_sand_particles(mut commands: Commands) {
+fn spawn_sand_particles(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut rng = rand::thread_rng();
     
     // right barier
@@ -76,6 +80,59 @@ fn spawn_sand_particles(mut commands: Commands) {
         })
         .insert(Particle {});
     }
+
+    // an obstacle
+    commands.spawn_bundle(SpriteBundle {
+        texture: asset_server.load("crab.png"),
+        transform: Transform {
+            translation: Vec3::new(0.0, 100.0, 0.0),
+            ..Default::default()
+        },
+        sprite: Sprite {
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .insert(Obstacle {})
+    .insert(Collider::Obstacle);
+}
+
+fn collision_system(mut commands: Commands,
+    mut query: Query<(&Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &Transform)>,
+    collider_query: Query<(Entity, &Collider, &Transform)>
+) {
+    let (mut player, mut player_transform) = player_query.single_mut();
+    // let translation = &mut player_transform.translation;
+    // let player_size = player_transform.scale.truncate();
+    let player_size = Vec2::new(30.0, 30.0);
+    let (the_player, mut transform) = query.single_mut();
+    let translation = &mut transform.translation;
+
+    for (collider_entity, collider, transform) in collider_query.iter() {
+        let collision = collide(
+            player_transform.translation,
+            player_size,
+            transform.translation,
+            // transform.scale.truncate(),
+            Vec2::new(30.0, 30.0)
+        );
+        if let Some(collision) = collision {
+            if let Collider::Obstacle = *collider {
+                // println!("collision!");
+
+
+
+                match collision {
+                    Collision::Left => translation.x += 10.0,
+                    Collision::Right => translation.x += -10.0,
+                    Collision::Top => println!("collision top"),
+                    Collision::Bottom => println!("collision bottom"),
+                }
+            }
+        }
+    }
+
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -89,6 +146,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform: Transform {
             translation: Vec3::new(0.0, -100.0, 0.0),
             // scale: Vec3::new(30.0, 30.0, 0.0),
+            // scale: Vec3::new(1.0, 1.0, 0.0),
             ..Default::default()
         },
         sprite: Sprite {
@@ -123,11 +181,10 @@ fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&Player, &mut Transform)>
 ) {
-    let (paddle, mut transform) = query.single_mut();
+    let (player, mut transform) = query.single_mut();
     
     let mut direction_x = 0.0;
     let mut direction_y = 0.0;
-    let mut cam_dir_y = 0.0;
 
     if keyboard_input.pressed(KeyCode::Left) {
         direction_x -= 1.0;
@@ -139,23 +196,20 @@ fn player_movement_system(
 
     if keyboard_input.pressed(KeyCode::Up) {
         direction_y += 1.0;
-        cam_dir_y += 1.0;
     }
 
     if keyboard_input.pressed(KeyCode::Down) {
         direction_y -= 1.0;
-        cam_dir_y -= 1.0;
     }
 
     let translation = &mut transform.translation;
-    // move the paddle horizontally
-    translation.x += direction_x * paddle.speed * TIME_STEP;
-    // bound the paddle within the walls
+    // move the player horizontally
+    translation.x += direction_x * player.speed * TIME_STEP;
+    // bound the player within the walls
     translation.x = translation.x.min(360.0).max(-360.0);
     // move the player in y also because Marisa said so
-    translation.y += direction_y * paddle.speed * TIME_STEP;
+    translation.y += direction_y * player.speed * TIME_STEP;
     // let cam_trans = &mut camera;
-    // cam_trans.y = cam_dir_y;
 }
 
 
@@ -184,6 +238,7 @@ fn main() {
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(TIME_STEP as f64))
                 .with_system(player_movement_system)
+                .with_system(collision_system)
         )      
         .run();
 }
